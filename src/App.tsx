@@ -18,6 +18,15 @@ export default function App() {
   )
 }
 
+function ComingSoon({ title }: { title: string }) {
+  return (
+    <div className="empty card">
+      <h2>{title}</h2>
+      <p className="muted">This app isn't linked up yet.</p>
+    </div>
+  )
+}
+
 function ProfileMenu({ email, isAdmin }: { email: string; isAdmin: boolean }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -182,6 +191,13 @@ function Shell() {
         <Routes>
           <Route path="/" element={<Home apps={allowed.filter((a) => !a.adminOnly)} email={session.user.email ?? ''} />} />
           <Route path="/payments" element={canUse('payments') ? <Feed isAdmin={isAdmin} /> : <Navigate to="/" replace />} />
+          {APPS.filter((a) => a.to.startsWith('/apps/')).map((a) => (
+            <Route
+              key={a.key}
+              path={a.to}
+              element={canUse(a.key) ? <ComingSoon title={a.title} /> : <Navigate to="/" replace />}
+            />
+          ))}
           <Route path="/admin" element={isAdmin ? <Admin /> : <Navigate to="/" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

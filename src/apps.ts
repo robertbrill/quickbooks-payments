@@ -24,6 +24,20 @@ export const APPS: AppTile[] = [
     icon: '▤',
   },
   {
+    key: 'household',
+    title: 'Brill Household Financials',
+    description: 'Household budget and finances.',
+    to: '/apps/household',
+    icon: '⌂',
+  },
+  {
+    key: 'networth',
+    title: 'Net Worth Tracker',
+    description: 'Assets, liabilities, and net worth over time.',
+    to: '/apps/networth',
+    icon: '↗',
+  },
+  {
     key: 'admin',
     title: 'Settings',
     description: 'Connect QuickBooks, choose which clients show, and manage users and roles.',
