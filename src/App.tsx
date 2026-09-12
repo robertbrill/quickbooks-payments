@@ -26,11 +26,11 @@ export default function App() {
       return
     }
     supabase
-      .from('qbo_team')
-      .select('*')
-      .eq('id', session.user.id)
-      .maybeSingle()
-      .then(({ data }) => setMe(data as TeamMember | null))
+      .rpc('qbo_join')
+      .then(({ data, error }) => {
+        if (error) console.error('qbo_join failed', error)
+        setMe((data as TeamMember | null) ?? null)
+      })
   }, [session])
 
   // Handle ?qbo=connected / ?qbo=error after the QuickBooks OAuth redirect.
@@ -51,6 +51,18 @@ export default function App() {
   if (!session) return <Login />
 
   const isAdmin = me?.role === 'admin'
+
+  if (me && me.role === 'blocked') {
+    return (
+      <div className="center">
+        <div className="card empty">
+          <h2>No access</h2>
+          <p className="muted">Your account has been blocked from the payment feed. Ask an admin to restore it.</p>
+          <button className="ghost" onClick={() => supabase.auth.signOut()}>Sign out</button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="app">

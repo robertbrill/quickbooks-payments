@@ -1,4 +1,4 @@
-export type Role = 'admin' | 'member'
+export type Role = 'admin' | 'member' | 'blocked'
 
 export interface TeamMember {
   id: string

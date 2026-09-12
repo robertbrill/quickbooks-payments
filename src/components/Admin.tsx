@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { shortDate, type ConnectionStatus, type Customer, type TeamMember } from '../lib/types'
+import { shortDate, type ConnectionStatus, type Customer, type Role, type TeamMember } from '../lib/types'
 
 export default function Admin() {
   return (
@@ -18,8 +18,8 @@ function ConnectionCard() {
   const [msg, setMsg] = useState<string | null>(null)
 
   async function load() {
-    const { data } = await supabase.from('qbo_connection_status').select('*').limit(1).maybeSingle()
-    setConn((data as ConnectionStatus) ?? null)
+    const { data } = await supabase.rpc('qbo_connection_status')
+    setConn(((data as ConnectionStatus[] | null) ?? [])[0] ?? null)
   }
   useEffect(() => {
     load()
@@ -194,15 +194,8 @@ function TeamCard() {
     load()
   }, [])
 
-  async function setRole(m: TeamMember, role: 'admin' | 'member') {
+  async function setRole(m: TeamMember, role: Role) {
     const { error } = await supabase.from('qbo_team').update({ role }).eq('id', m.id)
-    if (error) alert(error.message)
-    load()
-  }
-
-  async function remove(m: TeamMember) {
-    if (!confirm(`Remove ${m.email} from the team? They will lose access to the feed.`)) return
-    const { error } = await supabase.from('qbo_team').delete().eq('id', m.id)
     if (error) alert(error.message)
     load()
   }
@@ -211,29 +204,23 @@ function TeamCard() {
     <section className="card">
       <div className="card-head">
         <h2>Team</h2>
-        <span className="muted">{team.length} people</span>
+        <span className="muted">{team.filter((m) => m.role !== 'blocked').length} with access</span>
       </div>
       <p className="muted">
-        Anyone who signs in with a magic link gets member access. Promote admins here, or remove people who shouldn't see
-        the feed.
+        Anyone who signs in with a magic link gets member access. Promote admins here, or block people who shouldn't
+        see the feed.
       </p>
       <ul className="team">
         {team.map((m) => (
-          <li key={m.id}>
+          <li key={m.id} className={m.role === 'blocked' ? 'muted' : ''}>
             <span>
               {m.email} {m.id === meId && <span className="muted small">(you)</span>}
             </span>
-            <span className="row">
-              <select value={m.role} disabled={m.id === meId} onChange={(e) => setRole(m, e.target.value as 'admin' | 'member')}>
-                <option value="member">member</option>
-                <option value="admin">admin</option>
-              </select>
-              {m.id !== meId && (
-                <button className="ghost danger" onClick={() => remove(m)}>
-                  Remove
-                </button>
-              )}
-            </span>
+            <select value={m.role} disabled={m.id === meId} onChange={(e) => setRole(m, e.target.value as Role)}>
+              <option value="member">member</option>
+              <option value="admin">admin</option>
+              <option value="blocked">blocked (no access)</option>
+            </select>
           </li>
         ))}
       </ul>

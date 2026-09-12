@@ -44,9 +44,9 @@ Set these secrets on the project (Dashboard → Edge Functions → Secrets, or `
 
 `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` are provided automatically.
 
-Auth: enable the **Email** provider (magic links). The **first person to sign in becomes admin**;
+Auth: enable the **Email** provider (magic links). The app calls `qbo_join()` on sign-in; the **first person becomes admin**,
 everyone after is a member. To stop strangers from signing up, turn off "Allow new users to sign up"
-in Auth settings after your team is in, or remove people from the Team card.
+in Auth settings after your team is in, or set people to **blocked** in the Team card.
 
 ### 2. Intuit developer app
 
@@ -86,7 +86,7 @@ links land back on the app.
 | --- | --- | --- |
 | `qbo_team` | team members and roles | own row; admins see all |
 | `qbo_connections` | QuickBooks OAuth tokens | service role only |
-| `qbo_connection_status` (view) | connection info without tokens | admins |
+| `qbo_connection_status()` (function) | connection info without tokens | admins |
 | `qbo_oauth_states` | short-lived OAuth state | service role only |
 | `qbo_customers` | QuickBooks customers + `tracked` flag | admins all; members tracked only |
 | `qbo_payments` | payments | members, tracked clients only |

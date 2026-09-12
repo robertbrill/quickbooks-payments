@@ -7,33 +7,40 @@
 create table if not exists public.qbo_team (
   id          uuid primary key references auth.users(id) on delete cascade,
   email       text,
-  role        text not null default 'member' check (role in ('admin', 'member')),
+  role        text not null default 'member' check (role in ('admin', 'member', 'blocked')),
   created_at  timestamptz not null default now()
 );
 
--- First person to sign in becomes admin; everyone after is a member.
-create or replace function public.qbo_handle_new_user()
-returns trigger
+-- Called by the app right after sign-in. Creates the caller's team row if missing.
+-- The very first person becomes admin; everyone after is a member. Existing rows keep
+-- their role, so a blocked person cannot re-join by signing in again.
+create or replace function public.qbo_join()
+returns public.qbo_team
 language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  uid uuid := auth.uid();
+  em  text;
+  r   public.qbo_team;
 begin
+  if uid is null then
+    raise exception 'Not signed in';
+  end if;
+  select email into em from auth.users where id = uid;
   insert into public.qbo_team (id, email, role)
   values (
-    new.id,
-    new.email,
+    uid,
+    em,
     case when exists (select 1 from public.qbo_team where role = 'admin') then 'member' else 'admin' end
   )
-  on conflict (id) do nothing;
-  return new;
+  on conflict (id) do update set email = excluded.email
+  returning * into r;
+  return r;
 end;
 $$;
-
-drop trigger if exists qbo_on_auth_user_created on auth.users;
-create trigger qbo_on_auth_user_created
-  after insert on auth.users
-  for each row execute function public.qbo_handle_new_user();
+grant execute on function public.qbo_join() to authenticated;
 
 create or replace function public.qbo_is_admin()
 returns boolean
@@ -52,7 +59,7 @@ stable
 security definer
 set search_path = public
 as $$
-  select exists (select 1 from public.qbo_team where id = auth.uid());
+  select exists (select 1 from public.qbo_team where id = auth.uid() and role in ('admin', 'member'));
 $$;
 
 -- ---------------------------------------------------------------------------
@@ -77,13 +84,6 @@ create table if not exists public.qbo_oauth_states (
   user_id     uuid not null references auth.users(id) on delete cascade,
   created_at  timestamptz not null default now()
 );
-
--- Admin-safe view of the connection (no tokens).
-create or replace view public.qbo_connection_status
-with (security_invoker = false) as
-  select realm_id, company_name, environment, refresh_expires_at, updated_at
-  from public.qbo_connections
-  where public.qbo_is_admin();
 
 -- ---------------------------------------------------------------------------
 -- QuickBooks customers (the "clients" the admin picks from)
@@ -150,10 +150,6 @@ drop policy if exists "team: admin update" on public.qbo_team;
 create policy "team: admin update" on public.qbo_team
   for update to authenticated using (public.qbo_is_admin()) with check (public.qbo_is_admin());
 
-drop policy if exists "team: admin delete" on public.qbo_team;
-create policy "team: admin delete" on public.qbo_team
-  for delete to authenticated using (public.qbo_is_admin() and id <> auth.uid());
-
 -- qbo_customers: admins see all; members see only tracked clients. Only admins change tracking.
 drop policy if exists "customers: admin read" on public.qbo_customers;
 create policy "customers: admin read" on public.qbo_customers
@@ -195,6 +191,3 @@ begin
     alter publication supabase_realtime add table public.qbo_customers;
   end if;
 end $$;
-
--- Grants for the view
-grant select on public.qbo_connection_status to authenticated;
