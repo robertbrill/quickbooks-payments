@@ -16,6 +16,7 @@ export default function Feed({ isAdmin }: { isAdmin: boolean }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [clientFilter, setClientFilter] = useState<string>('all')
   const [monthFilter, setMonthFilter] = useState<string>('all')
+  const [search, setSearch] = useState('')
   const [sortKey, setSortKey] = useState<SortKey>('date')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [, tick] = useState(0)
@@ -106,10 +107,12 @@ export default function Feed({ isAdmin }: { isAdmin: boolean }) {
   }
 
   const visible = useMemo(() => {
+    const needle = search.trim().toLowerCase()
     const rows = payments.filter(
       (p) =>
         (clientFilter === 'all' || p.customer_id === clientFilter) &&
-        (monthFilter === 'all' || (p.txn_date ?? '').startsWith(monthFilter)),
+        (monthFilter === 'all' || (p.txn_date ?? '').startsWith(monthFilter)) &&
+        (!needle || (p.customer_name ?? '').toLowerCase().includes(needle)),
     )
     const dir = sortDir === 'asc' ? 1 : -1
     const byDate = (a: Payment, b: Payment) => (a.txn_date ?? '').localeCompare(b.txn_date ?? '')
@@ -132,7 +135,7 @@ export default function Feed({ isAdmin }: { isAdmin: boolean }) {
       }
       return cmp * dir
     })
-  }, [payments, clientFilter, monthFilter, sortKey, sortDir])
+  }, [payments, clientFilter, monthFilter, search, sortKey, sortDir])
 
   const months = useMemo(() => {
     const set = new Set<string>()
@@ -186,6 +189,15 @@ export default function Feed({ isAdmin }: { isAdmin: boolean }) {
             </select>
           </label>
           <label>
+            <span className="muted small">Search</span>
+            <input
+              type="search"
+              placeholder="Client name…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </label>
+          <label>
             <span className="muted small">Month</span>
             <select value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)}>
               <option value="all">All months</option>
@@ -210,11 +222,11 @@ export default function Feed({ isAdmin }: { isAdmin: boolean }) {
 
       {visible.length === 0 ? (
         <div className="empty card">
-          <h2>{clientFilter === 'all' && monthFilter === 'all' ? 'Waiting for the first payment' : 'No payments match'}</h2>
+          <h2>{clientFilter === 'all' && monthFilter === 'all' && !search ? 'Waiting for the first payment' : 'No payments match'}</h2>
           <p className="muted">
-            {clientFilter === 'all' && monthFilter === 'all'
+            {clientFilter === 'all' && monthFilter === 'all' && !search
               ? 'This page updates by itself. Nothing to refresh.'
-              : 'Try a different client or month.'}
+              : 'Try a different client, month, or search.'}
           </p>
         </div>
       ) : (
