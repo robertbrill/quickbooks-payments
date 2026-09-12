@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
 export default function Login() {
@@ -34,12 +33,11 @@ export default function Login() {
           </p>
         ) : (
           <>
-            <p className="muted">Enter your work email and we'll send you a one-time sign-in link.</p>
             <input
               type="email"
               required
               autoFocus
-              placeholder="you@brillmedia.co"
+              placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
@@ -49,9 +47,6 @@ export default function Login() {
             {error && <p className="error">{error}</p>}
           </>
         )}
-        <Link className="muted small" to="/">
-          ← Back
-        </Link>
       </form>
     </div>
   )

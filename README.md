@@ -3,7 +3,7 @@
 A small team app: an admin picks which QuickBooks Online clients to watch, and the team sees
 those clients' payments the moment they post in QuickBooks. Data lives in Supabase.
 
-- **Landing** → **Sign in** (magic link) → **Home**, a menu of tools. Add tools in `src/apps.ts`.
+- **Sign in** (magic link) → **Home**, a menu of tools. Add tools in `src/apps.ts`.
 - **Payments** (everyone): live table of payments from tracked clients, totals by client and month, search.
 - **Settings** (admins only): connect QuickBooks, choose clients to track, add users and set their role.
 

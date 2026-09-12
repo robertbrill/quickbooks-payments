@@ -3,7 +3,6 @@ import { BrowserRouter, Link, Navigate, NavLink, Route, Routes, useLocation, use
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from './lib/supabase'
 import type { TeamMember } from './lib/types'
-import Landing from './components/Landing'
 import Login from './components/Login'
 import Home from './components/Home'
 import Feed from './components/Feed'
@@ -56,8 +55,7 @@ function Shell() {
   if (!session) {
     return (
       <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="*" element={<Landing />} />
+        <Route path="*" element={<Login />} />
       </Routes>
     )
   }
