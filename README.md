@@ -40,7 +40,7 @@ Set these secrets on the project (Dashboard → Edge Functions → Secrets, or `
 | `QBO_CLIENT_SECRET` | same place |
 | `QBO_WEBHOOK_VERIFIER` | from your Intuit app (Webhooks → Verifier token) |
 | `QBO_ENVIRONMENT` | `production` (or `sandbox` while testing) |
-| `APP_URL` | where the frontend is hosted: `https://qbo-payment-feed.vercel.app` |
+| `APP_URL` | where the frontend is hosted: `https://quickbooks-payments.vercel.app` |
 
 `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` are provided automatically.
 
@@ -69,8 +69,8 @@ npm run dev            # local
 npm run build          # dist/ (Vercel builds this itself on deploy)
 ```
 
-Hosted on Vercel (team "Robert Brill Personal", project `qbo-payment-feed`) at
-<https://qbo-payment-feed.vercel.app>. Redeploy from the Vercel connector or `npx vercel --prod`.
+Hosted on Vercel (team "Robert Brill Personal", project `quickbooks-payments`, linked to GitHub robertbrill/quickbooks-payments) at
+<https://quickbooks-payments.vercel.app>. Every push to `main` redeploys production.
 
 Add the deployed URL to Supabase → Auth → URL Configuration (Site URL + Redirect URLs) so magic
 links land back on the app.
