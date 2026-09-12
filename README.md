@@ -4,7 +4,7 @@ A small team app: an admin picks which QuickBooks Online clients to watch, and t
 those clients' payments the moment they post in QuickBooks. Data lives in Supabase.
 
 - **Feed** (everyone): live list of payments from tracked clients, today / month totals, client filter.
-- **Admin** (admins only): connect QuickBooks, choose clients to track, manage who is on the team.
+- **Admin** (admins only): connect QuickBooks, choose clients to track, add users and set their role.
 
 ## How it works
 
@@ -29,7 +29,7 @@ Admin browser ──▶ qbo-oauth / qbo-sync (edge fns) ──▶ QuickBooks API
 
 Apply `supabase/migrations/0001_qbo_payment_feed.sql` to the project (SQL editor, CLI, or MCP).
 
-Deploy the three functions in `supabase/functions/`. `qbo-webhook` and `qbo-oauth` must have
+Deploy the four functions in `supabase/functions/`. `qbo-webhook` and `qbo-oauth` must have
 **Verify JWT turned off** (Intuit calls them directly; they authenticate on their own).
 
 Set these secrets on the project (Dashboard → Edge Functions → Secrets, or `supabase secrets set`):
@@ -44,9 +44,10 @@ Set these secrets on the project (Dashboard → Edge Functions → Secrets, or `
 
 `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` are provided automatically.
 
-Auth: enable the **Email** provider (magic links). The app calls `qbo_join()` on sign-in; the **first person becomes admin**,
-everyone after is a member. To stop strangers from signing up, turn off "Allow new users to sign up"
-in Auth settings after your team is in, or set people to **blocked** in the Team card.
+Auth: enable the **Email** provider (magic links) and turn **off** "Allow new users to sign up".
+Admins add people from the **Users** card in the app: enter an email, pick Admin or User, and Supabase
+sends the invite. The first person ever to sign in becomes admin; after that roles come from the Users card.
+Set someone to **Blocked** to revoke feed access without touching their account.
 
 ### 2. Intuit developer app
 

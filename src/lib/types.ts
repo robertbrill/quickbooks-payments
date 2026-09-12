@@ -5,6 +5,14 @@ export interface TeamMember {
   email: string | null
   role: Role
   created_at: string
+  invited_at: string | null
+  last_seen_at: string | null
+}
+
+export const ROLE_LABELS: Record<Role, string> = {
+  admin: 'Admin',
+  member: 'User',
+  blocked: 'Blocked',
 }
 
 export interface Customer {

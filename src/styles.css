@@ -126,6 +126,7 @@ input:focus, select:focus { outline: 2px solid var(--accent-soft); border-color:
 .client-name { font-weight: 500; }
 .team li { display: flex; justify-content: space-between; align-items: center; padding: 8px 4px; }
 .team .row { margin-top: 0; }
+.invite input[type=email] { flex: 1; min-width: 220px; }
 
 @media (max-width: 640px) {
   .payment { flex-direction: column; }

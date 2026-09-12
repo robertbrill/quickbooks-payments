@@ -12,3 +12,6 @@ verify_jwt = false
 
 [functions.qbo-sync]
 verify_jwt = true
+
+[functions.qbo-invite]
+verify_jwt = true

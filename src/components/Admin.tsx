@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { shortDate, type ConnectionStatus, type Customer, type Role, type TeamMember } from '../lib/types'
+import { ROLE_LABELS, shortDate, timeAgo, type ConnectionStatus, type Customer, type Role, type TeamMember } from '../lib/types'
 
 export default function Admin() {
   return (
@@ -181,6 +181,10 @@ function ClientsCard() {
 function TeamCard() {
   const [team, setTeam] = useState<TeamMember[]>([])
   const [meId, setMeId] = useState<string | null>(null)
+  const [email, setEmail] = useState('')
+  const [role, setRole] = useState<Role>('member')
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState<string | null>(null)
 
   async function load() {
     const [{ data }, { data: auth }] = await Promise.all([
@@ -194,32 +198,87 @@ function TeamCard() {
     load()
   }, [])
 
-  async function setRole(m: TeamMember, role: Role) {
-    const { error } = await supabase.from('qbo_team').update({ role }).eq('id', m.id)
+  async function invite(e: React.FormEvent) {
+    e.preventDefault()
+    setBusy(true)
+    setMsg(null)
+    const { data, error } = await supabase.functions.invoke('qbo-invite', { body: { email, role } })
+    setBusy(false)
+    if (error) {
+      let detail = error.message
+      try {
+        const ctx = (error as { context?: Response }).context
+        if (ctx) detail = (await ctx.json()).error ?? detail
+      } catch {
+        // keep generic message
+      }
+      setMsg(detail)
+      return
+    }
+    setMsg(
+      data.existing
+        ? `${email} already had an account, so no email was sent. Their role is now ${ROLE_LABELS[data.role as Role]}. They can sign in with a magic link.`
+        : `Invite sent to ${email} as ${ROLE_LABELS[data.role as Role]}.`,
+    )
+    setEmail('')
+    load()
+  }
+
+  async function changeRole(m: TeamMember, next: Role) {
+    const { error } = await supabase.from('qbo_team').update({ role: next }).eq('id', m.id)
     if (error) alert(error.message)
     load()
+  }
+
+  function status(m: TeamMember) {
+    if (m.role === 'blocked') return 'blocked'
+    if (m.last_seen_at) return `active · seen ${timeAgo(m.last_seen_at)}`
+    if (m.invited_at) return `invited ${shortDate(m.invited_at)} · not signed in yet`
+    return 'not signed in yet'
   }
 
   return (
     <section className="card">
       <div className="card-head">
-        <h2>Team</h2>
+        <h2>Users</h2>
         <span className="muted">{team.filter((m) => m.role !== 'blocked').length} with access</span>
       </div>
       <p className="muted">
-        Anyone who signs in with a magic link gets member access. Promote admins here, or block people who shouldn't
-        see the feed.
+        <strong>Admins</strong> connect QuickBooks, choose clients, and manage users. <strong>Users</strong> see the
+        feed. Blocked people can't sign in to the feed.
       </p>
+
+      <form className="row invite" onSubmit={invite}>
+        <input
+          type="email"
+          required
+          placeholder="teammate@company.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <select value={role} onChange={(e) => setRole(e.target.value as Role)}>
+          <option value="member">User</option>
+          <option value="admin">Admin</option>
+        </select>
+        <button className="primary" disabled={busy || !email}>
+          {busy ? 'Sending…' : 'Add user'}
+        </button>
+      </form>
+      {msg && <p className="note">{msg}</p>}
+
       <ul className="team">
         {team.map((m) => (
           <li key={m.id} className={m.role === 'blocked' ? 'muted' : ''}>
             <span>
-              {m.email} {m.id === meId && <span className="muted small">(you)</span>}
+              <div>
+                {m.email} {m.id === meId && <span className="muted small">(you)</span>}
+              </div>
+              <div className="muted small">{status(m)}</div>
             </span>
-            <select value={m.role} disabled={m.id === meId} onChange={(e) => setRole(m, e.target.value as Role)}>
-              <option value="member">member</option>
-              <option value="admin">admin</option>
-              <option value="blocked">blocked (no access)</option>
+            <select value={m.role} disabled={m.id === meId} onChange={(e) => changeRole(m, e.target.value as Role)}>
+              <option value="member">User</option>
+              <option value="admin">Admin</option>
+              <option value="blocked">Blocked</option>
             </select>
           </li>
         ))}
