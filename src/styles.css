@@ -80,7 +80,23 @@ a.button.primary { background: var(--accent); color: #fff; border-color: var(--a
 .tile:hover { border-color: var(--accent); transform: translateY(-1px); }
 .tile-icon { display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); font-weight: 700; font-size: 18px; margin-bottom: 4px; }
 .tile-title { font-weight: 600; font-size: 17px; }
-.user { display: flex; align-items: center; gap: 8px; }
+.profile { position: relative; }
+.avatar {
+  width: 36px; height: 36px; border-radius: 50%; padding: 0; display: grid; place-items: center;
+  background: var(--accent-soft); color: var(--accent); font-weight: 700; border: 1px solid var(--border);
+}
+.avatar:hover, .avatar[aria-expanded="true"] { border-color: var(--accent); }
+.menu {
+  position: absolute; right: 0; top: 44px; min-width: 220px; z-index: 20;
+  background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+.menu-email { padding: 8px 10px 6px; border-bottom: 1px solid var(--border); margin-bottom: 4px; word-break: break-all; }
+.menu-item {
+  display: block; width: 100%; text-align: left; padding: 8px 10px; border-radius: 6px;
+  background: none; border: 0; color: inherit; text-decoration: none; font: inherit; cursor: pointer;
+}
+.menu-item:hover { background: color-mix(in srgb, var(--bg) 70%, var(--card)); }
 
 .center { min-height: 70vh; display: grid; place-items: center; padding: 16px; }
 .muted { color: var(--muted); }

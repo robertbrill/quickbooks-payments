@@ -12,7 +12,7 @@ export const APPS: AppTile[] = [
   {
     key: 'payments',
     title: 'Payments App',
-    description: 'Live feed of QuickBooks payments from tracked clients, with totals by client and month.',
+    description: 'Live feed of QuickBooks payments',
     to: '/payments',
     icon: '$',
   },

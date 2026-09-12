@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { BrowserRouter, Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from './lib/supabase'
 import type { TeamMember, UserApp } from './lib/types'
@@ -14,6 +14,59 @@ export default function App() {
     <BrowserRouter>
       <Shell />
     </BrowserRouter>
+  )
+}
+
+function ProfileMenu({ email, isAdmin }: { email: string; isAdmin: boolean }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const location = useLocation()
+
+  useEffect(() => setOpen(false), [location.pathname])
+
+  useEffect(() => {
+    if (!open) return
+    const onClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', onClick)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onClick)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  const initial = (email[0] ?? '?').toUpperCase()
+
+  return (
+    <div className="profile" ref={ref}>
+      <button
+        className="avatar"
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        title={email}
+      >
+        {initial}
+      </button>
+      {open && (
+        <div className="menu" role="menu">
+          <div className="menu-email muted small">{email}</div>
+          {isAdmin && (
+            <Link to="/admin" className="menu-item" role="menuitem">
+              Settings
+            </Link>
+          )}
+          <button className="menu-item" role="menuitem" onClick={() => supabase.auth.signOut()}>
+            Sign out
+          </button>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -104,28 +157,7 @@ function Shell() {
           <span className="logo">B</span>
           <span>Brill Media</span>
         </Link>
-        <nav className="tabs">
-          <NavLink to="/" end>
-            Home
-          </NavLink>
-          {allowed.map((app) =>
-            app.to.startsWith('http') ? (
-              <a key={app.key} href={app.to} target="_blank" rel="noreferrer">
-                {app.title} ↗
-              </a>
-            ) : (
-              <NavLink key={app.key} to={app.to}>
-                {app.title}
-              </NavLink>
-            ),
-          )}
-        </nav>
-        <div className="user">
-          <span className="muted">{session.user.email}</span>
-          <button className="ghost" onClick={() => supabase.auth.signOut()}>
-            Sign out
-          </button>
-        </div>
+        <ProfileMenu email={session.user.email ?? ''} isAdmin={isAdmin} />
       </header>
 
       {banner && (
