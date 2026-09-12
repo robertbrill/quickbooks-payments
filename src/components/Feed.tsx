@@ -2,7 +2,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { supabase } from '../lib/supabase'
 import { money, shortDate, timeAgo, type Customer, type Payment } from '../lib/types'
 
-const LIMIT = 300
+const LIMIT = 1000
 
 type SortKey = 'date' | 'client' | 'amount' | 'posted'
 type SortDir = 'asc' | 'desc'
@@ -14,7 +14,8 @@ export default function Feed({ isAdmin }: { isAdmin: boolean }) {
   const [live, setLive] = useState<'connecting' | 'live' | 'offline'>('connecting')
   const [fresh, setFresh] = useState<Set<string>>(new Set())
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
-  const [filter, setFilter] = useState<string>('all')
+  const [clientFilter, setClientFilter] = useState<string>('all')
+  const [monthFilter, setMonthFilter] = useState<string>('all')
   const [sortKey, setSortKey] = useState<SortKey>('date')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [, tick] = useState(0)
@@ -105,7 +106,11 @@ export default function Feed({ isAdmin }: { isAdmin: boolean }) {
   }
 
   const visible = useMemo(() => {
-    const rows = filter === 'all' ? payments : payments.filter((p) => p.customer_id === filter)
+    const rows = payments.filter(
+      (p) =>
+        (clientFilter === 'all' || p.customer_id === clientFilter) &&
+        (monthFilter === 'all' || (p.txn_date ?? '').startsWith(monthFilter)),
+    )
     const dir = sortDir === 'asc' ? 1 : -1
     const byDate = (a: Payment, b: Payment) => (a.txn_date ?? '').localeCompare(b.txn_date ?? '')
     return [...rows].sort((a, b) => {
@@ -127,19 +132,18 @@ export default function Feed({ isAdmin }: { isAdmin: boolean }) {
       }
       return cmp * dir
     })
-  }, [payments, filter, sortKey, sortDir])
+  }, [payments, clientFilter, monthFilter, sortKey, sortDir])
+
+  const months = useMemo(() => {
+    const set = new Set<string>()
+    for (const p of payments) if (p.txn_date) set.add(p.txn_date.slice(0, 7))
+    return [...set].sort().reverse()
+  }, [payments])
 
   const stats = useMemo(() => {
-    const todayStr = new Date().toISOString().slice(0, 10)
-    const monthStr = todayStr.slice(0, 7)
-    let today = 0
-    let month = 0
-    for (const p of visible) {
-      if (!p.txn_date) continue
-      if (p.txn_date === todayStr) today += Number(p.total_amount)
-      if (p.txn_date.startsWith(monthStr)) month += Number(p.total_amount)
-    }
-    return { today, month, count: visible.length }
+    let total = 0
+    for (const p of visible) total += Number(p.total_amount)
+    return { total, count: visible.length, avg: visible.length ? total / visible.length : 0 }
   }, [visible])
 
   if (loading) return <div className="center muted">Loading payments…</div>
@@ -168,32 +172,50 @@ export default function Feed({ isAdmin }: { isAdmin: boolean }) {
 
   return (
     <div className="feed">
-      <div className="feed-head">
+      <div className="totals card">
+        <div className="totals-pickers">
+          <label>
+            <span className="muted small">Client</span>
+            <select value={clientFilter} onChange={(e) => setClientFilter(e.target.value)}>
+              <option value="all">All tracked clients ({tracked.length})</option>
+              {tracked.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.display_name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span className="muted small">Month</span>
+            <select value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)}>
+              <option value="all">All months</option>
+              {months.map((m) => (
+                <option key={m} value={m}>
+                  {monthLabel(m)}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
         <div className="stats">
-          <Stat label="Today" value={money(stats.today)} />
-          <Stat label="This month" value={money(stats.month)} />
-          <Stat label="Payments shown" value={String(stats.count)} />
+          <Stat label="Total" value={money(stats.total)} />
+          <Stat label="Payments" value={String(stats.count)} />
+          <Stat label="Average" value={money(stats.avg)} />
         </div>
-        <div className="controls">
-          <select value={filter} onChange={(e) => setFilter(e.target.value)}>
-            <option value="all">All tracked clients ({tracked.length})</option>
-            {tracked.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.display_name}
-              </option>
-            ))}
-          </select>
-          <span className={`live ${live}`}>
-            <span className="dot" />
-            {live === 'live' ? 'Live' : live === 'connecting' ? 'Connecting…' : 'Reconnecting…'}
-          </span>
-        </div>
+        <span className={`live ${live}`}>
+          <span className="dot" />
+          {live === 'live' ? 'Live' : live === 'connecting' ? 'Connecting…' : 'Reconnecting…'}
+        </span>
       </div>
 
       {visible.length === 0 ? (
         <div className="empty card">
-          <h2>Waiting for the first payment</h2>
-          <p className="muted">This page updates by itself. Nothing to refresh.</p>
+          <h2>{clientFilter === 'all' && monthFilter === 'all' ? 'Waiting for the first payment' : 'No payments match'}</h2>
+          <p className="muted">
+            {clientFilter === 'all' && monthFilter === 'all'
+              ? 'This page updates by itself. Nothing to refresh.'
+              : 'Try a different client or month.'}
+          </p>
         </div>
       ) : (
         <div className="card table-card">
@@ -279,6 +301,11 @@ export default function Feed({ isAdmin }: { isAdmin: boolean }) {
 }
 
 const FragmentRow = Fragment
+
+function monthLabel(ym: string): string {
+  const [y, m] = ym.split('-').map(Number)
+  return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+}
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (

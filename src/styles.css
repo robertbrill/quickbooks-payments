@@ -89,10 +89,13 @@ input:focus, select:focus { outline: 2px solid var(--accent-soft); border-color:
 .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
 .check { display: flex; align-items: center; gap: 6px; color: var(--muted); }
 
-.feed-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
-.stats { display: flex; gap: 24px; }
+.totals { display: flex; align-items: center; gap: 28px; flex-wrap: wrap; margin-bottom: 16px; padding: 14px 20px; }
+.totals-pickers { display: flex; gap: 12px; flex-wrap: wrap; }
+.totals-pickers label { display: flex; flex-direction: column; gap: 2px; }
+.totals-pickers select { min-width: 180px; }
+.totals .live { margin-left: auto; }
+.stats { display: flex; gap: 28px; }
 .stat-value { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
-.controls { display: flex; align-items: center; gap: 12px; }
 .live { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
 .live .dot { width: 8px; height: 8px; border-radius: 50%; background: #9ca3af; }
 .live.live .dot { background: #16a34a; box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.2); }
