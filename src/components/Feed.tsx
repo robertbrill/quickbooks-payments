@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { money, shortDate, timeAgo, type Customer, type Payment } from '../lib/types'
 
@@ -13,6 +13,7 @@ export default function Feed({ isAdmin }: { isAdmin: boolean }) {
   const [loading, setLoading] = useState(true)
   const [live, setLive] = useState<'connecting' | 'live' | 'offline'>('connecting')
   const [fresh, setFresh] = useState<Set<string>>(new Set())
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [filter, setFilter] = useState<string>('all')
   const [sortKey, setSortKey] = useState<SortKey>('date')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
@@ -84,6 +85,15 @@ export default function Feed({ isAdmin }: { isAdmin: boolean }) {
     const t = setInterval(() => tick((n) => n + 1), 60_000)
     return () => clearInterval(t)
   }, [])
+
+  function toggleExpanded(id: string) {
+    setExpanded((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   function toggleSort(key: SortKey) {
     if (key === sortKey) {
@@ -200,28 +210,64 @@ export default function Feed({ isAdmin }: { isAdmin: boolean }) {
             <tbody>
               {visible.map((p) => {
                 const invoices = (p.linked_invoices ?? []).filter((i) => i.txn_type === 'Invoice')
+                const summary = [
+                  p.payment_method,
+                  p.reference_number ? `Ref ${p.reference_number}` : null,
+                  invoices.length ? invoices.map((i) => `Inv ${i.doc_number ?? i.txn_id}`).join(', ') : null,
+                  p.private_note,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')
+                const open = expanded.has(p.id)
                 return (
-                  <tr key={p.id} className={fresh.has(p.id) ? 'fresh' : ''}>
-                    <td className="nowrap">{shortDate(p.txn_date)}</td>
-                    <td className="client">{p.customer_name ?? 'Unknown client'}</td>
-                    <td className="num amount">{money(Number(p.total_amount), p.currency)}</td>
-                    <td className="details">
-                      {p.payment_method && <span className="detail">{p.payment_method}</span>}
-                      {p.reference_number && <span className="detail">Ref {p.reference_number}</span>}
-                      {invoices.length > 0 && (
-                        <span className="detail">
-                          {invoices.map((i) => `Inv ${i.doc_number ?? i.txn_id}`).join(', ')}
-                        </span>
-                      )}
-                      {p.unapplied_amount != null && Number(p.unapplied_amount) > 0 && (
-                        <span className="detail">Unapplied {money(Number(p.unapplied_amount), p.currency)}</span>
-                      )}
-                      {p.private_note && <div className="detail-note muted">{p.private_note}</div>}
-                    </td>
-                    <td className="nowrap muted" title={new Date(p.received_at).toLocaleString()}>
-                      {timeAgo(p.received_at)}
-                    </td>
-                  </tr>
+                  <FragmentRow key={p.id}>
+                    <tr
+                      className={`${fresh.has(p.id) ? 'fresh' : ''} ${open ? 'open' : ''} clickable`}
+                      onClick={() => toggleExpanded(p.id)}
+                      aria-expanded={open}
+                    >
+                      <td className="nowrap">{shortDate(p.txn_date)}</td>
+                      <td className="client">{p.customer_name ?? 'Unknown client'}</td>
+                      <td className="num amount">{money(Number(p.total_amount), p.currency)}</td>
+                      <td className="details">
+                        <span className="chev">{open ? '▾' : '▸'}</span>
+                        <span className="summary" title={summary}>{summary || <span className="muted">—</span>}</span>
+                      </td>
+                      <td className="nowrap muted" title={new Date(p.received_at).toLocaleString()}>
+                        {timeAgo(p.received_at)}
+                      </td>
+                    </tr>
+                    {open && (
+                      <tr className="detail-row">
+                        <td colSpan={5}>
+                          <dl className="detail-grid">
+                            <dt>Method</dt>
+                            <dd>{p.payment_method ?? '—'}</dd>
+                            <dt>Reference</dt>
+                            <dd>{p.reference_number ?? '—'}</dd>
+                            <dt>Invoices</dt>
+                            <dd>
+                              {invoices.length
+                                ? invoices
+                                    .map((i) =>
+                                      `${i.doc_number ?? i.txn_id}${i.amount != null ? ` (${money(Number(i.amount), p.currency)})` : ''}`,
+                                    )
+                                    .join(', ')
+                                : '—'}
+                            </dd>
+                            <dt>Unapplied</dt>
+                            <dd>{p.unapplied_amount != null ? money(Number(p.unapplied_amount), p.currency) : '—'}</dd>
+                            <dt>Memo</dt>
+                            <dd className="memo">{p.private_note ?? '—'}</dd>
+                            <dt>QuickBooks ID</dt>
+                            <dd>{p.id}</dd>
+                            <dt>Received</dt>
+                            <dd>{new Date(p.received_at).toLocaleString()}</dd>
+                          </dl>
+                        </td>
+                      </tr>
+                    )}
+                  </FragmentRow>
                 )
               })}
             </tbody>
@@ -231,6 +277,8 @@ export default function Feed({ isAdmin }: { isAdmin: boolean }) {
     </div>
   )
 }
+
+const FragmentRow = Fragment
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (

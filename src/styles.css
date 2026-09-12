@@ -112,9 +112,16 @@ input:focus, select:focus { outline: 2px solid var(--accent-soft); border-color:
 .nowrap { white-space: nowrap; }
 .client { font-weight: 600; }
 .amount { font-weight: 600; color: var(--accent); white-space: nowrap; }
-.details { min-width: 220px; }
-.detail { display: inline-block; margin-right: 10px; }
-.detail-note { margin-top: 3px; font-size: 13px; white-space: pre-wrap; }
+.details { max-width: 0; width: 45%; }
+.details .summary { display: inline-block; max-width: calc(100% - 20px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+.chev { display: inline-block; width: 16px; color: var(--muted); font-size: 12px; }
+tr.clickable { cursor: pointer; }
+tr.open td { border-bottom: 0; }
+.detail-row td { padding: 4px 14px 14px 44px; background: color-mix(in srgb, var(--bg) 50%, var(--card)); }
+.detail-grid { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 0; font-size: 13.5px; }
+.detail-grid dt { color: var(--muted); }
+.detail-grid dd { margin: 0; }
+.detail-grid .memo { white-space: pre-wrap; }
 
 .empty { text-align: center; padding: 48px 24px; }
 .empty h2 { margin-bottom: 8px; }
