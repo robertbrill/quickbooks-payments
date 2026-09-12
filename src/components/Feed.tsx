@@ -4,6 +4,9 @@ import { money, shortDate, timeAgo, type Customer, type Payment } from '../lib/t
 
 const LIMIT = 300
 
+type SortKey = 'date' | 'client' | 'amount' | 'posted'
+type SortDir = 'asc' | 'desc'
+
 export default function Feed({ isAdmin }: { isAdmin: boolean }) {
   const [payments, setPayments] = useState<Payment[]>([])
   const [tracked, setTracked] = useState<Customer[]>([])
@@ -11,6 +14,8 @@ export default function Feed({ isAdmin }: { isAdmin: boolean }) {
   const [live, setLive] = useState<'connecting' | 'live' | 'offline'>('connecting')
   const [fresh, setFresh] = useState<Set<string>>(new Set())
   const [filter, setFilter] = useState<string>('all')
+  const [sortKey, setSortKey] = useState<SortKey>('date')
+  const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [, tick] = useState(0)
   const firstLoad = useRef(true)
 
@@ -50,7 +55,6 @@ export default function Feed({ isAdmin }: { isAdmin: boolean }) {
         setPayments((prev) => {
           const idx = prev.findIndex((x) => x.id === row.id)
           if (idx === -1) {
-            // Brand new payment: flash it.
             setFresh((f) => new Set(f).add(row.id))
             setTimeout(() => setFresh((f) => { const n = new Set(f); n.delete(row.id); return n }), 8000)
             return [row, ...prev].slice(0, LIMIT)
@@ -64,7 +68,6 @@ export default function Feed({ isAdmin }: { isAdmin: boolean }) {
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           setLive('live')
-          // Catch anything that landed while we were disconnected.
           if (!firstLoad.current) load()
           firstLoad.current = false
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
@@ -82,14 +85,42 @@ export default function Feed({ isAdmin }: { isAdmin: boolean }) {
     return () => clearInterval(t)
   }, [])
 
-  const visible = useMemo(
-    () => (filter === 'all' ? payments : payments.filter((p) => p.customer_id === filter)),
-    [payments, filter],
-  )
+  function toggleSort(key: SortKey) {
+    if (key === sortKey) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortDir(key === 'client' ? 'asc' : 'desc')
+    }
+  }
+
+  const visible = useMemo(() => {
+    const rows = filter === 'all' ? payments : payments.filter((p) => p.customer_id === filter)
+    const dir = sortDir === 'asc' ? 1 : -1
+    const byDate = (a: Payment, b: Payment) => (a.txn_date ?? '').localeCompare(b.txn_date ?? '')
+    return [...rows].sort((a, b) => {
+      let cmp = 0
+      switch (sortKey) {
+        case 'client':
+          cmp = (a.customer_name ?? '').localeCompare(b.customer_name ?? '', undefined, { sensitivity: 'base' })
+          if (cmp === 0) cmp = -byDate(a, b) // same client: newest first
+          break
+        case 'amount':
+          cmp = Number(a.total_amount) - Number(b.total_amount)
+          break
+        case 'posted':
+          cmp = a.received_at.localeCompare(b.received_at)
+          break
+        default:
+          cmp = byDate(a, b)
+          if (cmp === 0) cmp = a.received_at.localeCompare(b.received_at)
+      }
+      return cmp * dir
+    })
+  }, [payments, filter, sortKey, sortDir])
 
   const stats = useMemo(() => {
-    const now = new Date()
-    const todayStr = now.toISOString().slice(0, 10)
+    const todayStr = new Date().toISOString().slice(0, 10)
     const monthStr = todayStr.slice(0, 7)
     let today = 0
     let month = 0
@@ -115,6 +146,15 @@ export default function Feed({ isAdmin }: { isAdmin: boolean }) {
       </div>
     )
   }
+
+  const Th = ({ k, label, className }: { k: SortKey; label: string; className?: string }) => (
+    <th className={className} aria-sort={sortKey === k ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+      <button className="th-btn" onClick={() => toggleSort(k)}>
+        {label}
+        <span className="sort-ind">{sortKey === k ? (sortDir === 'asc' ? '▲' : '▼') : ''}</span>
+      </button>
+    </th>
+  )
 
   return (
     <div className="feed">
@@ -146,36 +186,47 @@ export default function Feed({ isAdmin }: { isAdmin: boolean }) {
           <p className="muted">This page updates by itself. Nothing to refresh.</p>
         </div>
       ) : (
-        <ul className="payments">
-          {visible.map((p) => (
-            <li key={p.id} className={`payment card ${fresh.has(p.id) ? 'fresh' : ''}`}>
-              <div className="payment-main">
-                <div className="payment-client">{p.customer_name ?? 'Unknown client'}</div>
-                <div className="payment-meta muted">
-                  {shortDate(p.txn_date)}
-                  {p.payment_method && <> · {p.payment_method}</>}
-                  {p.reference_number && <> · Ref {p.reference_number}</>}
-                  {p.linked_invoices && p.linked_invoices.length > 0 && (
-                    <>
-                      {' · '}
-                      {p.linked_invoices
-                        .filter((i) => i.txn_type === 'Invoice')
-                        .map((i) => `Inv ${i.doc_number ?? i.txn_id}`)
-                        .join(', ')}
-                    </>
-                  )}
-                </div>
-                {p.private_note && <div className="payment-note muted">{p.private_note}</div>}
-              </div>
-              <div className="payment-right">
-                <div className="payment-amount">{money(Number(p.total_amount), p.currency)}</div>
-                <div className="muted small" title={new Date(p.received_at).toLocaleString()}>
-                  posted {timeAgo(p.received_at)}
-                </div>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <div className="card table-card">
+          <table className="payments-table">
+            <thead>
+              <tr>
+                <Th k="date" label="Date" />
+                <Th k="client" label="Client" />
+                <Th k="amount" label="Amount" className="num" />
+                <th>Details</th>
+                <Th k="posted" label="Posted" />
+              </tr>
+            </thead>
+            <tbody>
+              {visible.map((p) => {
+                const invoices = (p.linked_invoices ?? []).filter((i) => i.txn_type === 'Invoice')
+                return (
+                  <tr key={p.id} className={fresh.has(p.id) ? 'fresh' : ''}>
+                    <td className="nowrap">{shortDate(p.txn_date)}</td>
+                    <td className="client">{p.customer_name ?? 'Unknown client'}</td>
+                    <td className="num amount">{money(Number(p.total_amount), p.currency)}</td>
+                    <td className="details">
+                      {p.payment_method && <span className="detail">{p.payment_method}</span>}
+                      {p.reference_number && <span className="detail">Ref {p.reference_number}</span>}
+                      {invoices.length > 0 && (
+                        <span className="detail">
+                          {invoices.map((i) => `Inv ${i.doc_number ?? i.txn_id}`).join(', ')}
+                        </span>
+                      )}
+                      {p.unapplied_amount != null && Number(p.unapplied_amount) > 0 && (
+                        <span className="detail">Unapplied {money(Number(p.unapplied_amount), p.currency)}</span>
+                      )}
+                      {p.private_note && <div className="detail-note muted">{p.private_note}</div>}
+                    </td>
+                    <td className="nowrap muted" title={new Date(p.received_at).toLocaleString()}>
+                      {timeAgo(p.received_at)}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   )

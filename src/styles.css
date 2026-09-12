@@ -98,14 +98,23 @@ input:focus, select:focus { outline: 2px solid var(--accent-soft); border-color:
 .live.live .dot { background: #16a34a; box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.2); }
 .live.offline .dot { background: #f59e0b; }
 
-.payments { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
-.payment { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; transition: background 1.5s ease; }
-.payment.fresh { background: var(--fresh); border-color: #f59e0b; }
-.payment-client { font-weight: 600; font-size: 16px; }
-.payment-meta { margin-top: 2px; font-size: 13.5px; }
-.payment-note { margin-top: 6px; font-size: 13.5px; white-space: pre-wrap; }
-.payment-right { text-align: right; white-space: nowrap; }
-.payment-amount { font-size: 20px; font-weight: 600; color: var(--accent); }
+.table-card { padding: 0; overflow-x: auto; }
+.payments-table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+.payments-table th, .payments-table td { padding: 10px 14px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--border); }
+.payments-table thead th { font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); font-weight: 600; background: color-mix(in srgb, var(--bg) 60%, var(--card)); position: sticky; top: 0; }
+.payments-table tbody tr:last-child td { border-bottom: 0; }
+.payments-table tbody tr:hover { background: color-mix(in srgb, var(--bg) 50%, var(--card)); }
+.payments-table tr.fresh td { background: var(--fresh); transition: background 1.5s ease; }
+.th-btn { background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; text-transform: inherit; letter-spacing: inherit; display: inline-flex; align-items: center; gap: 4px; }
+.th-btn:hover { color: var(--text); }
+.sort-ind { font-size: 9px; width: 10px; display: inline-block; }
+.num { text-align: right !important; }
+.nowrap { white-space: nowrap; }
+.client { font-weight: 600; }
+.amount { font-weight: 600; color: var(--accent); white-space: nowrap; }
+.details { min-width: 220px; }
+.detail { display: inline-block; margin-right: 10px; }
+.detail-note { margin-top: 3px; font-size: 13px; white-space: pre-wrap; }
 
 .empty { text-align: center; padding: 48px 24px; }
 .empty h2 { margin-bottom: 8px; }
@@ -129,7 +138,7 @@ input:focus, select:focus { outline: 2px solid var(--accent-soft); border-color:
 .invite input[type=email] { flex: 1; min-width: 220px; }
 
 @media (max-width: 640px) {
-  .payment { flex-direction: column; }
-  .payment-right { text-align: left; }
   .stats { gap: 16px; }
+  .payments-table { font-size: 13.5px; }
+  .payments-table th, .payments-table td { padding: 8px 10px; }
 }
