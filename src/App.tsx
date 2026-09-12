@@ -139,7 +139,7 @@ function Shell() {
 
       <main>
         <Routes>
-          <Route path="/" element={<Home apps={allowed} email={session.user.email ?? ''} />} />
+          <Route path="/" element={<Home apps={allowed.filter((a) => !a.adminOnly)} email={session.user.email ?? ''} />} />
           <Route path="/payments" element={canUse('payments') ? <Feed isAdmin={isAdmin} /> : <Navigate to="/" replace />} />
           <Route path="/admin" element={isAdmin ? <Admin /> : <Navigate to="/" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
