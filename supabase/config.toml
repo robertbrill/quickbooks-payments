@@ -1,0 +1,14 @@
+# Only the function-level settings matter here; the rest of the project config
+# lives in the Supabase dashboard.
+
+[functions.qbo-webhook]
+# Intuit calls this directly — it authenticates with an HMAC signature, not a JWT.
+verify_jwt = false
+
+[functions.qbo-oauth]
+# The OAuth callback is a browser redirect from Intuit with no JWT.
+# The POST "start" route checks the user's JWT manually.
+verify_jwt = false
+
+[functions.qbo-sync]
+verify_jwt = true
