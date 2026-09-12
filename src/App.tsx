@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import type { Session } from '@supabase/supabase-js'
-import { supabase } from './lib/supabase'
+import { authLinkType, supabase } from './lib/supabase'
 import type { TeamMember, UserApp } from './lib/types'
 import { APPS } from './apps'
 import Login from './components/Login'
+import SetPassword from './components/SetPassword'
 import Home from './components/Home'
 import Feed from './components/Feed'
 import Admin from './components/Admin'
@@ -74,13 +75,17 @@ function Shell() {
   const [session, setSession] = useState<Session | null | undefined>(undefined)
   const [me, setMe] = useState<TeamMember | null>(null)
   const [myApps, setMyApps] = useState<Set<string>>(new Set())
+  const [needsPassword, setNeedsPassword] = useState(authLinkType === 'invite' || authLinkType === 'recovery')
   const [banner, setBanner] = useState<string | null>(null)
   const navigate = useNavigate()
   const location = useLocation()
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s))
+    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
+      if (event === 'PASSWORD_RECOVERY') setNeedsPassword(true)
+      setSession(s)
+    })
     return () => sub.subscription.unsubscribe()
   }, [])
 
@@ -130,6 +135,10 @@ function Shell() {
         <Route path="*" element={<Login />} />
       </Routes>
     )
+  }
+
+  if (needsPassword) {
+    return <SetPassword email={session.user.email ?? ''} onDone={() => { setNeedsPassword(false); navigate('/', { replace: true }) }} />
   }
 
   const isAdmin = me?.role === 'admin'

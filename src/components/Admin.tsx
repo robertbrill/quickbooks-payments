@@ -327,8 +327,8 @@ function TeamCard() {
     }
     setMsg(
       data.existing
-        ? `${email} already had an account, so no email was sent. Their role is now ${ROLE_LABELS[data.role as Role]}. They can sign in with a magic link.`
-        : `Invite sent to ${email} as ${ROLE_LABELS[data.role as Role]}.`,
+        ? `${email} already had an account, so no email was sent. Their role is now ${ROLE_LABELS[data.role as Role]}. They can sign in with their password, or use Forgot password on the sign-in page.`
+        : `Invite sent to ${email} as ${ROLE_LABELS[data.role as Role]}. They'll choose a password when they open it.`,
     )
     setEmail('')
     load()
@@ -354,8 +354,8 @@ function TeamCard() {
         <span className="muted">{team.filter((m) => m.role !== 'blocked').length} with access</span>
       </div>
       <p className="muted">
-        <strong>Admins</strong> connect QuickBooks, choose clients, and manage users. <strong>Users</strong> see the
-        feed. Blocked people can't sign in to the feed.
+        <strong>Admins</strong> connect QuickBooks, choose clients, and manage users. <strong>Users</strong> see only
+        the apps they're granted. Blocked people can't get in.
       </p>
 
       <form className="row invite" onSubmit={invite}>
