@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
 export default function Login() {
@@ -13,7 +14,7 @@ export default function Login() {
     setError(null)
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: window.location.origin },
+      options: { emailRedirectTo: window.location.origin, shouldCreateUser: false },
     })
     setBusy(false)
     if (error) setError(error.message)
@@ -24,19 +25,21 @@ export default function Login() {
     <div className="center">
       <form className="card login" onSubmit={submit}>
         <div className="brand big">
-          <span className="logo">$</span>
-          <span>Payment Feed</span>
+          <span className="logo">B</span>
+          <span>Brill Media</span>
         </div>
         {sent ? (
-          <p>Check your inbox. We sent a sign-in link to <strong>{email}</strong>.</p>
+          <p>
+            Check your inbox. We sent a sign-in link to <strong>{email}</strong>.
+          </p>
         ) : (
           <>
-            <p className="muted">Sign in with your work email. We'll send you a magic link.</p>
+            <p className="muted">Enter your work email and we'll send you a one-time sign-in link.</p>
             <input
               type="email"
               required
               autoFocus
-              placeholder="you@company.com"
+              placeholder="you@brillmedia.co"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
@@ -46,6 +49,9 @@ export default function Login() {
             {error && <p className="error">{error}</p>}
           </>
         )}
+        <Link className="muted small" to="/">
+          ← Back
+        </Link>
       </form>
     </div>
   )
