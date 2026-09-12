@@ -3,10 +3,10 @@ import { supabase } from '../lib/supabase'
 import { ROLE_LABELS, shortDate, timeAgo, type ConnectionStatus, type Customer, type Role, type TeamMember, type UserApp } from '../lib/types'
 import { APPS } from '../apps'
 
-export default function Admin() {
+export default function Admin({ isOwner }: { isOwner: boolean }) {
   return (
     <div className="admin">
-      <TeamCard />
+      <TeamCard isOwner={isOwner} />
       <AppsCard />
       <ConnectionCard />
       <ClientsCard />
@@ -233,7 +233,7 @@ function AppsCard() {
         <span className="muted">{grantable.length} app{grantable.length === 1 ? '' : 's'}</span>
       </div>
       <p className="muted">
-        Tick the apps each person should see on their home screen. Admins automatically see everything.
+        Tick the apps each person should see on their home screen. Owners automatically see everything.
       </p>
       {loading ? (
         <p className="muted">Loading…</p>
@@ -259,8 +259,8 @@ function AppsCard() {
                   </td>
                   {grantable.map((a) => (
                     <td key={a.key} className="center-col">
-                      {m.role === 'admin' ? (
-                        <span className="muted small" title="Admins see every app">all</span>
+                      {m.role === 'owner' ? (
+                        <span className="muted small" title="Owners see every app">all</span>
                       ) : (
                         <input
                           type="checkbox"
@@ -288,7 +288,7 @@ function AppsCard() {
   )
 }
 
-function TeamCard() {
+function TeamCard({ isOwner }: { isOwner: boolean }) {
   const [team, setTeam] = useState<TeamMember[]>([])
   const [meId, setMeId] = useState<string | null>(null)
   const [email, setEmail] = useState('')
@@ -361,8 +361,8 @@ function TeamCard() {
         <span className="muted">{team.filter((m) => m.role !== 'blocked').length} with access</span>
       </div>
       <p className="muted">
-        <strong>Admins</strong> connect QuickBooks, choose clients, and manage users. <strong>Users</strong> see only
-        the apps they're granted. Blocked people can't get in.
+        <strong>Owners</strong> see every app and manage everything. <strong>Admins</strong> run Settings but see
+        only the apps they're granted. <strong>Users</strong> see granted apps. Blocked people can't get in.
       </p>
 
       <form className="row invite" onSubmit={invite}>
@@ -396,9 +396,14 @@ function TeamCard() {
               <button className="ghost small" onClick={() => sendPasswordLink(m)} disabled={m.role === 'blocked'}>
                 Send password link
               </button>
-              <select value={m.role} disabled={m.id === meId} onChange={(e) => changeRole(m, e.target.value as Role)}>
-                <option value="member">User</option>
+              <select
+                value={m.role}
+                disabled={m.id === meId || (m.role === 'owner' && !isOwner)}
+                onChange={(e) => changeRole(m, e.target.value as Role)}
+              >
+                {(isOwner || m.role === 'owner') && <option value="owner">Owner</option>}
                 <option value="admin">Admin</option>
+                <option value="member">User</option>
                 <option value="blocked">Blocked</option>
               </select>
             </span>

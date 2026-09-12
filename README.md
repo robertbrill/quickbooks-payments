@@ -6,7 +6,7 @@ those clients' payments the moment they post in QuickBooks. Data lives in Supaba
 - **Sign in** (email + password) → **Home**, a menu of tools. Add tools in `src/apps.ts`.
 - **Payments** (everyone): live table of payments from tracked clients, totals by client and month, search.
 - **Settings** (admins only): add users and set their role, grant apps per user, connect QuickBooks, choose clients to track.
-  Users see only the apps they've been granted; admins see everything.
+  Roles: **owner** sees every app and can assign owners; **admin** runs Settings but sees only granted apps; **user** sees granted apps.
 
 ## How it works
 

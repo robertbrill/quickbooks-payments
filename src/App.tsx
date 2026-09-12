@@ -150,8 +150,9 @@ function Shell() {
     return <SetPassword email={session.user.email ?? ''} onDone={() => { setNeedsPassword(false); navigate('/', { replace: true }) }} />
   }
 
-  const isAdmin = me?.role === 'admin'
-  const canUse = (key: string) => isAdmin || myApps.has(key)
+  const isOwner = me?.role === 'owner'
+  const isAdmin = isOwner || me?.role === 'admin'
+  const canUse = (key: string) => isOwner || myApps.has(key)
   const allowed = APPS.filter((app) => (app.adminOnly ? isAdmin : canUse(app.key)))
 
   if (me && me.role === 'blocked') {
@@ -198,7 +199,7 @@ function Shell() {
               element={canUse(a.key) ? <ComingSoon title={a.title} /> : <Navigate to="/" replace />}
             />
           ))}
-          <Route path="/admin" element={isAdmin ? <Admin /> : <Navigate to="/" replace />} />
+          <Route path="/admin" element={isAdmin ? <Admin isOwner={isOwner} /> : <Navigate to="/" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

@@ -1,4 +1,4 @@
-export type Role = 'admin' | 'member' | 'blocked'
+export type Role = 'owner' | 'admin' | 'member' | 'blocked'
 
 export interface TeamMember {
   id: string
@@ -15,6 +15,7 @@ export interface UserApp {
 }
 
 export const ROLE_LABELS: Record<Role, string> = {
+  owner: 'Owner',
   admin: 'Admin',
   member: 'User',
   blocked: 'Blocked',
