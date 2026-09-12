@@ -11,10 +11,17 @@ export interface AppTile {
 export const APPS: AppTile[] = [
   {
     key: 'payments',
-    title: 'Payments',
+    title: 'Payments App',
     description: 'Live feed of QuickBooks payments from tracked clients, with totals by client and month.',
     to: '/payments',
     icon: '$',
+  },
+  {
+    key: 'billing',
+    title: 'Billing App',
+    description: 'Client billing and invoicing.',
+    to: '/billing',
+    icon: '▤',
   },
   {
     key: 'admin',
