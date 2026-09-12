@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { BrowserRouter, Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from './lib/supabase'
-import type { TeamMember } from './lib/types'
+import type { TeamMember, UserApp } from './lib/types'
+import { APPS } from './apps'
 import Login from './components/Login'
 import Home from './components/Home'
 import Feed from './components/Feed'
@@ -19,6 +20,7 @@ export default function App() {
 function Shell() {
   const [session, setSession] = useState<Session | null | undefined>(undefined)
   const [me, setMe] = useState<TeamMember | null>(null)
+  const [myApps, setMyApps] = useState<Set<string>>(new Set())
   const [banner, setBanner] = useState<string | null>(null)
   const navigate = useNavigate()
   const location = useLocation()
@@ -38,6 +40,23 @@ function Shell() {
       if (error) console.error('qbo_join failed', error)
       setMe((data as TeamMember | null) ?? null)
     })
+
+    const uid = session.user.id
+    const loadApps = async () => {
+      const { data } = await supabase.from('qbo_user_apps').select('app_key').eq('user_id', uid)
+      setMyApps(new Set(((data as Pick<UserApp, 'app_key'>[] | null) ?? []).map((r) => r.app_key)))
+    }
+    loadApps()
+    const ch = supabase
+      .channel(`my-apps-${uid}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'qbo_user_apps', filter: `user_id=eq.${uid}` }, () => loadApps())
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'qbo_team', filter: `id=eq.${uid}` }, (msg) =>
+        setMe(msg.new as TeamMember),
+      )
+      .subscribe()
+    return () => {
+      supabase.removeChannel(ch)
+    }
   }, [session])
 
   // Handle ?qbo=connected / ?qbo=error after the QuickBooks OAuth redirect.
@@ -61,6 +80,8 @@ function Shell() {
   }
 
   const isAdmin = me?.role === 'admin'
+  const canUse = (key: string) => isAdmin || myApps.has(key)
+  const allowed = APPS.filter((app) => (app.adminOnly ? isAdmin : canUse(app.key)))
 
   if (me && me.role === 'blocked') {
     return (
@@ -87,8 +108,11 @@ function Shell() {
           <NavLink to="/" end>
             Home
           </NavLink>
-          <NavLink to="/payments">Payments</NavLink>
-          {isAdmin && <NavLink to="/admin">Settings</NavLink>}
+          {allowed.map((app) => (
+            <NavLink key={app.key} to={app.to}>
+              {app.title}
+            </NavLink>
+          ))}
         </nav>
         <div className="user">
           <span className="muted">{session.user.email}</span>
@@ -109,8 +133,8 @@ function Shell() {
 
       <main>
         <Routes>
-          <Route path="/" element={<Home me={me} email={session.user.email ?? ''} />} />
-          <Route path="/payments" element={<Feed isAdmin={isAdmin} />} />
+          <Route path="/" element={<Home apps={allowed} email={session.user.email ?? ''} />} />
+          <Route path="/payments" element={canUse('payments') ? <Feed isAdmin={isAdmin} /> : <Navigate to="/" replace />} />
           <Route path="/admin" element={isAdmin ? <Admin /> : <Navigate to="/" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

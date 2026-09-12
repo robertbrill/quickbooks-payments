@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { ROLE_LABELS, shortDate, timeAgo, type ConnectionStatus, type Customer, type Role, type TeamMember } from '../lib/types'
+import { ROLE_LABELS, shortDate, timeAgo, type ConnectionStatus, type Customer, type Role, type TeamMember, type UserApp } from '../lib/types'
+import { APPS } from '../apps'
 
 export default function Admin() {
   return (
     <div className="admin">
+      <TeamCard />
+      <AppsCard />
       <ConnectionCard />
       <ClientsCard />
-      <TeamCard />
     </div>
   )
 }
@@ -173,6 +175,114 @@ function ClientsCard() {
           ))}
           {visible.length === 0 && <li className="muted">No matches.</li>}
         </ul>
+      )}
+    </section>
+  )
+}
+
+function AppsCard() {
+  const grantable = APPS.filter((a) => !a.adminOnly)
+  const [team, setTeam] = useState<TeamMember[]>([])
+  const [grants, setGrants] = useState<Set<string>>(new Set()) // "userId:appKey"
+  const [loading, setLoading] = useState(true)
+
+  async function load() {
+    const [{ data: t }, { data: g }] = await Promise.all([
+      supabase.from('qbo_team').select('*').order('created_at'),
+      supabase.from('qbo_user_apps').select('user_id, app_key'),
+    ])
+    setTeam((t as TeamMember[]) ?? [])
+    setGrants(new Set(((g as UserApp[]) ?? []).map((r) => `${r.user_id}:${r.app_key}`)))
+    setLoading(false)
+  }
+  useEffect(() => {
+    load()
+    const ch = supabase
+      .channel('admin-apps')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'qbo_user_apps' }, () => load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'qbo_team' }, () => load())
+      .subscribe()
+    return () => {
+      supabase.removeChannel(ch)
+    }
+  }, [])
+
+  async function toggle(userId: string, appKey: string, on: boolean) {
+    const key = `${userId}:${appKey}`
+    setGrants((prev) => {
+      const next = new Set(prev)
+      if (on) next.add(key)
+      else next.delete(key)
+      return next
+    })
+    const { error } = on
+      ? await supabase.from('qbo_user_apps').insert({ user_id: userId, app_key: appKey })
+      : await supabase.from('qbo_user_apps').delete().eq('user_id', userId).eq('app_key', appKey)
+    if (error) {
+      alert(error.message)
+      load()
+    }
+  }
+
+  const people = team.filter((m) => m.role !== 'blocked')
+
+  return (
+    <section className="card">
+      <div className="card-head">
+        <h2>App access</h2>
+        <span className="muted">{grantable.length} app{grantable.length === 1 ? '' : 's'}</span>
+      </div>
+      <p className="muted">
+        Tick the apps each person should see on their home screen. Admins automatically see everything.
+      </p>
+      {loading ? (
+        <p className="muted">Loading…</p>
+      ) : (
+        <div className="table-wrap">
+          <table className="access-table">
+            <thead>
+              <tr>
+                <th>Person</th>
+                {grantable.map((a) => (
+                  <th key={a.key} className="center-col">
+                    {a.title}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {people.map((m) => (
+                <tr key={m.id}>
+                  <td>
+                    <div>{m.email}</div>
+                    <div className="muted small">{ROLE_LABELS[m.role]}</div>
+                  </td>
+                  {grantable.map((a) => (
+                    <td key={a.key} className="center-col">
+                      {m.role === 'admin' ? (
+                        <span className="muted small" title="Admins see every app">all</span>
+                      ) : (
+                        <input
+                          type="checkbox"
+                          checked={grants.has(`${m.id}:${a.key}`)}
+                          onChange={(e) => toggle(m.id, a.key, e.target.checked)}
+                          aria-label={`${a.title} for ${m.email}`}
+                        />
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+              {people.length === 0 && (
+                <tr>
+                  <td colSpan={grantable.length + 1} className="muted">
+                    No users yet. Add someone above.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       )}
     </section>
   )

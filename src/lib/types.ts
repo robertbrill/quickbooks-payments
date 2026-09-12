@@ -9,6 +9,11 @@ export interface TeamMember {
   last_seen_at: string | null
 }
 
+export interface UserApp {
+  user_id: string
+  app_key: string
+}
+
 export const ROLE_LABELS: Record<Role, string> = {
   admin: 'Admin',
   member: 'User',
