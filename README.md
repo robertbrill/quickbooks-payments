@@ -98,6 +98,6 @@ and password-reset links land back on the app.
 | `qbo_connection_status()` (function) | connection info without tokens | admins |
 | `qbo_oauth_states` | short-lived OAuth state | service role only |
 | `qbo_customers` | QuickBooks customers + `tracked` flag | admins all; members tracked only |
-| `qbo_user_apps` | which apps each user may open | own rows; those with the grant-app-access function manage |
+| `qbo_user_apps` | which apps each user may open | own rows; those with the grant-app-access function manage, but only for apps they hold themselves |
 | `qbo_role_permissions` | which functions each account type has | everyone reads; owners edit |
 | `qbo_payments` | payments | users granted the payments app, tracked clients only |
