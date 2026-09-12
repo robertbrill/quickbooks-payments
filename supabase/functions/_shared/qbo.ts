@@ -57,7 +57,7 @@ export async function requireAdmin(req: Request): Promise<{ userId: string }> {
   const { data: { user }, error } = await sb.auth.getUser()
   if (error || !user) throw new HttpError(401, 'Not signed in')
   const { data } = await sb.from('qbo_team').select('role').eq('id', user.id).maybeSingle()
-  if (data?.role !== 'admin') throw new HttpError(403, 'Admins only')
+  if (data?.role !== 'owner' && data?.role !== 'admin') throw new HttpError(403, 'Admins only')
   return { userId: user.id }
 }
 
