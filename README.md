@@ -3,7 +3,7 @@
 A small team app: an admin picks which QuickBooks Online clients to watch, and the team sees
 those clients' payments the moment they post in QuickBooks. Data lives in Supabase.
 
-- **Sign in** (email + password) → **Home**, a menu of tools. "Forgot password" emails a link to set a new one. Add tools in `src/apps.ts`.
+- **Sign in** (email + password) → **Home**, a menu of tools. Add tools in `src/apps.ts`.
 - **Payments** (everyone): live table of payments from tracked clients, totals by client and month, search.
 - **Settings** (admins only): add users and set their role, grant apps per user, connect QuickBooks, choose clients to track.
   Users see only the apps they've been granted; admins see everything.
@@ -48,8 +48,8 @@ Set these secrets on the project (Dashboard → Edge Functions → Secrets, or `
 
 Auth: enable the **Email** provider and turn **off** "Allow new users to sign up".
 Admins add people from the **Users** card in the app: enter an email, pick Admin or User, and Supabase
-sends an invite link that lands on a set-password screen. Existing users without a password use
-"Forgot password" on the sign-in page. The first person ever to sign in becomes admin; after that roles
+sends an invite link that lands on a set-password screen. Admins can send anyone a
+"Send password link" from the Users card to set or reset a password. The first person ever to sign in becomes admin; after that roles
 come from the Users card.
 Set someone to **Blocked** to revoke feed access without touching their account.
 

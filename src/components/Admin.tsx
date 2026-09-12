@@ -327,11 +327,18 @@ function TeamCard() {
     }
     setMsg(
       data.existing
-        ? `${email} already had an account, so no email was sent. Their role is now ${ROLE_LABELS[data.role as Role]}. They can sign in with their password, or use Forgot password on the sign-in page.`
+        ? `${email} already had an account, so no email was sent. Their role is now ${ROLE_LABELS[data.role as Role]}. Use Send password link if they need to set one.`
         : `Invite sent to ${email} as ${ROLE_LABELS[data.role as Role]}. They'll choose a password when they open it.`,
     )
     setEmail('')
     load()
+  }
+
+  async function sendPasswordLink(m: TeamMember) {
+    if (!m.email) return
+    setMsg(null)
+    const { error } = await supabase.auth.resetPasswordForEmail(m.email, { redirectTo: window.location.origin })
+    setMsg(error ? error.message : `Password link sent to ${m.email}.`)
   }
 
   async function changeRole(m: TeamMember, next: Role) {
@@ -385,11 +392,16 @@ function TeamCard() {
               </div>
               <div className="muted small">{status(m)}</div>
             </span>
-            <select value={m.role} disabled={m.id === meId} onChange={(e) => changeRole(m, e.target.value as Role)}>
-              <option value="member">User</option>
-              <option value="admin">Admin</option>
-              <option value="blocked">Blocked</option>
-            </select>
+            <span className="row">
+              <button className="ghost small" onClick={() => sendPasswordLink(m)} disabled={m.role === 'blocked'}>
+                Send password link
+              </button>
+              <select value={m.role} disabled={m.id === meId} onChange={(e) => changeRole(m, e.target.value as Role)}>
+                <option value="member">User</option>
+                <option value="admin">Admin</option>
+                <option value="blocked">Blocked</option>
+              </select>
+            </span>
           </li>
         ))}
       </ul>
