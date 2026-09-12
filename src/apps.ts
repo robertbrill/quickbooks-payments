@@ -20,7 +20,7 @@ export const APPS: AppTile[] = [
     key: 'billing',
     title: 'Billing App',
     description: 'Client billing and invoicing.',
-    to: '/billing',
+    to: 'https://bright-companion-hub-dusky.vercel.app',
     icon: '▤',
   },
   {
