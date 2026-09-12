@@ -32,7 +32,7 @@ Deno.serve(async (req: Request) => {
 
   try {
     if (req.method === 'POST') {
-      const { userId } = await requireAdmin(req)
+      const { userId } = await requireAdmin(req, 'manage_quickbooks')
       const sb = adminClient()
       const state = crypto.randomUUID()
 

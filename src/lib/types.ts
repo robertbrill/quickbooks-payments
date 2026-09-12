@@ -9,6 +9,11 @@ export interface TeamMember {
   last_seen_at: string | null
 }
 
+export interface RolePermission {
+  role: Role
+  permission: string
+}
+
 export interface UserApp {
   user_id: string
   app_key: string

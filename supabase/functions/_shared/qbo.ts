@@ -51,13 +51,14 @@ function userClient(req: Request): SupabaseClient {
   })
 }
 
-/** Throws 401/403 unless the caller is a signed-in admin. */
-export async function requireAdmin(req: Request): Promise<{ userId: string }> {
+/** Throws 401/403 unless the caller is signed in and their account type has this permission. */
+export async function requireAdmin(req: Request, permission: string): Promise<{ userId: string }> {
   const sb = userClient(req)
   const { data: { user }, error } = await sb.auth.getUser()
   if (error || !user) throw new HttpError(401, 'Not signed in')
-  const { data } = await sb.from('qbo_team').select('role').eq('id', user.id).maybeSingle()
-  if (data?.role !== 'owner' && data?.role !== 'admin') throw new HttpError(403, 'Admins only')
+  const { data: ok, error: permErr } = await sb.rpc('qbo_can', { perm: permission })
+  if (permErr) throw permErr
+  if (!ok) throw new HttpError(403, "Your account type can't do that")
   return { userId: user.id }
 }
 

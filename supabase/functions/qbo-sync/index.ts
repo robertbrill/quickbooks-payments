@@ -17,7 +17,7 @@ Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS_HEADERS })
   try {
     if (req.method !== 'POST') throw new HttpError(405, 'Method not allowed')
-    await requireAdmin(req)
+    await requireAdmin(req, 'manage_quickbooks')
 
     let backfillDays = 90
     try {

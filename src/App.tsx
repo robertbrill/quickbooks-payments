@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import type { Session } from '@supabase/supabase-js'
 import { authLinkType, supabase } from './lib/supabase'
-import type { TeamMember, UserApp } from './lib/types'
+import type { RolePermission, TeamMember, UserApp } from './lib/types'
 import { APPS } from './apps'
 import Login from './components/Login'
 import SetPassword from './components/SetPassword'
@@ -84,6 +84,7 @@ function Shell() {
   const [session, setSession] = useState<Session | null | undefined>(undefined)
   const [me, setMe] = useState<TeamMember | null>(null)
   const [myApps, setMyApps] = useState<Set<string>>(new Set())
+  const [perms, setPerms] = useState<Set<string>>(new Set())
   const [needsPassword, setNeedsPassword] = useState(authLinkType === 'invite' || authLinkType === 'recovery')
   const [banner, setBanner] = useState<string | null>(null)
   const navigate = useNavigate()
@@ -126,6 +127,28 @@ function Shell() {
     }
   }, [session])
 
+  // Permissions for my account type (owners have all).
+  useEffect(() => {
+    if (!me) {
+      setPerms(new Set())
+      return
+    }
+    const role = me.role
+    const loadPerms = async () => {
+      if (role === 'owner') return setPerms(new Set(['*']))
+      const { data } = await supabase.from('qbo_role_permissions').select('permission').eq('role', role)
+      setPerms(new Set(((data as Pick<RolePermission, 'permission'>[] | null) ?? []).map((r) => r.permission)))
+    }
+    loadPerms()
+    const ch = supabase
+      .channel(`perms-${role}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'qbo_role_permissions' }, () => loadPerms())
+      .subscribe()
+    return () => {
+      supabase.removeChannel(ch)
+    }
+  }, [me])
+
   // Handle ?qbo=connected / ?qbo=error after the QuickBooks OAuth redirect.
   useEffect(() => {
     const params = new URLSearchParams(location.search)
@@ -151,9 +174,10 @@ function Shell() {
   }
 
   const isOwner = me?.role === 'owner'
-  const isAdmin = isOwner || me?.role === 'admin'
+  const can = (perm: string) => isOwner || perms.has(perm)
+  const hasSettings = isOwner || perms.size > 0
   const canUse = (key: string) => isOwner || myApps.has(key)
-  const allowed = APPS.filter((app) => (app.adminOnly ? isAdmin : canUse(app.key)))
+  const allowed = APPS.filter((app) => (app.adminOnly ? hasSettings : canUse(app.key)))
 
   if (me && me.role === 'blocked') {
     return (
@@ -176,7 +200,7 @@ function Shell() {
           <span className="logo">B</span>
           <span>Brill Media</span>
         </Link>
-        <ProfileMenu email={session.user.email ?? ''} isAdmin={isAdmin} />
+        <ProfileMenu email={session.user.email ?? ''} isAdmin={hasSettings} />
       </header>
 
       {banner && (
@@ -191,7 +215,7 @@ function Shell() {
       <main>
         <Routes>
           <Route path="/" element={<Home apps={allowed.filter((a) => !a.adminOnly)} email={session.user.email ?? ''} />} />
-          <Route path="/payments" element={canUse('payments') ? <Feed isAdmin={isAdmin} /> : <Navigate to="/" replace />} />
+          <Route path="/payments" element={canUse('payments') ? <Feed isAdmin={hasSettings} /> : <Navigate to="/" replace />} />
           {APPS.filter((a) => a.to.startsWith('/apps/')).map((a) => (
             <Route
               key={a.key}
@@ -199,7 +223,7 @@ function Shell() {
               element={canUse(a.key) ? <ComingSoon title={a.title} /> : <Navigate to="/" replace />}
             />
           ))}
-          <Route path="/admin" element={isAdmin ? <Admin isOwner={isOwner} /> : <Navigate to="/" replace />} />
+          <Route path="/admin" element={hasSettings ? <Admin isOwner={isOwner} can={can} /> : <Navigate to="/" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

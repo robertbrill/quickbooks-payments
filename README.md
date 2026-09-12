@@ -6,7 +6,8 @@ those clients' payments the moment they post in QuickBooks. Data lives in Supaba
 - **Sign in** (email + password) → **Home**, a menu of tools. Add tools in `src/apps.ts`.
 - **Payments** (everyone): live table of payments from tracked clients, totals by client and month, search.
 - **Settings** (admins only): add users and set their role, grant apps per user, connect QuickBooks, choose clients to track.
-  Roles: **owner** sees every app and can assign owners; **admin** runs Settings but sees only granted apps; **user** sees granted apps.
+  Roles: **owner** sees every app, has every function, and can assign owners. What **admins** and **users** may do
+  (manage users, grant app access, connect QuickBooks, choose clients) is set per role on the Roles tab.
 
 ## How it works
 
@@ -97,5 +98,6 @@ and password-reset links land back on the app.
 | `qbo_connection_status()` (function) | connection info without tokens | admins |
 | `qbo_oauth_states` | short-lived OAuth state | service role only |
 | `qbo_customers` | QuickBooks customers + `tracked` flag | admins all; members tracked only |
-| `qbo_user_apps` | which apps each user may open | own rows; admins manage |
+| `qbo_user_apps` | which apps each user may open | own rows; those with the grant-app-access function manage |
+| `qbo_role_permissions` | which functions each account type has | everyone reads; owners edit |
 | `qbo_payments` | payments | users granted the payments app, tracked clients only |

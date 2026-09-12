@@ -9,7 +9,7 @@ Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS_HEADERS })
   try {
     if (req.method !== 'POST') throw new HttpError(405, 'Method not allowed')
-    const { userId: adminId } = await requireAdmin(req)
+    const { userId: adminId } = await requireAdmin(req, 'manage_users')
 
     const body = await req.json().catch(() => ({}))
     const email = String(body?.email ?? '').trim().toLowerCase()

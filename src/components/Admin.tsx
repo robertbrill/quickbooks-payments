@@ -1,35 +1,136 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { ROLE_LABELS, shortDate, timeAgo, type ConnectionStatus, type Customer, type Role, type TeamMember, type UserApp } from '../lib/types'
+import { ROLE_LABELS, shortDate, timeAgo, type ConnectionStatus, type Customer, type Role, type RolePermission, type TeamMember, type UserApp } from '../lib/types'
 import { APPS } from '../apps'
+import { PERMISSIONS } from '../permissions'
 
-type SettingsTab = 'access' | 'payments'
+type SettingsTab = 'access' | 'payments' | 'roles'
 
-export default function Admin({ isOwner }: { isOwner: boolean }) {
-  const [tab, setTab] = useState<SettingsTab>('access')
+export default function Admin({ isOwner, can }: { isOwner: boolean; can: (perm: string) => boolean }) {
+  const showAccess = can('manage_users') || can('manage_app_access')
+  const showPayments = can('manage_quickbooks') || can('manage_clients')
+  const tabs: { key: SettingsTab; label: string; show: boolean }[] = [
+    { key: 'access', label: 'Access', show: showAccess },
+    { key: 'payments', label: 'Payments App', show: showPayments },
+    { key: 'roles', label: 'Roles', show: isOwner },
+  ]
+  const visible = tabs.filter((t) => t.show)
+  const [tab, setTab] = useState<SettingsTab>(visible[0]?.key ?? 'access')
+
   return (
     <div className="admin">
       <h1>Settings</h1>
       <nav className="subtabs" role="tablist">
-        <button role="tab" aria-selected={tab === 'access'} className={tab === 'access' ? 'active' : ''} onClick={() => setTab('access')}>
-          Access
-        </button>
-        <button role="tab" aria-selected={tab === 'payments'} className={tab === 'payments' ? 'active' : ''} onClick={() => setTab('payments')}>
-          Payments App
-        </button>
+        {visible.map((t) => (
+          <button key={t.key} role="tab" aria-selected={tab === t.key} className={tab === t.key ? 'active' : ''} onClick={() => setTab(t.key)}>
+            {t.label}
+          </button>
+        ))}
       </nav>
-      {tab === 'access' ? (
+      {tab === 'access' && (
         <>
-          <TeamCard isOwner={isOwner} />
-          <AppsCard />
-        </>
-      ) : (
-        <>
-          <ConnectionCard />
-          <ClientsCard />
+          {can('manage_users') && <TeamCard isOwner={isOwner} />}
+          {can('manage_app_access') && <AppsCard />}
         </>
       )}
+      {tab === 'payments' && (
+        <>
+          {can('manage_quickbooks') && <ConnectionCard />}
+          {can('manage_clients') && <ClientsCard />}
+        </>
+      )}
+      {tab === 'roles' && isOwner && <RolesCard />}
     </div>
+  )
+}
+
+function RolesCard() {
+  const roles: { key: Role; label: string }[] = [
+    { key: 'owner', label: 'Owner' },
+    { key: 'admin', label: 'Admin' },
+    { key: 'member', label: 'User' },
+  ]
+  const [grants, setGrants] = useState<Set<string>>(new Set()) // "role:permission"
+  const [loading, setLoading] = useState(true)
+
+  async function load() {
+    const { data } = await supabase.from('qbo_role_permissions').select('role, permission')
+    setGrants(new Set(((data as RolePermission[]) ?? []).map((r) => `${r.role}:${r.permission}`)))
+    setLoading(false)
+  }
+  useEffect(() => {
+    load()
+  }, [])
+
+  async function toggle(role: Role, permission: string, on: boolean) {
+    const key = `${role}:${permission}`
+    setGrants((prev) => {
+      const next = new Set(prev)
+      if (on) next.add(key)
+      else next.delete(key)
+      return next
+    })
+    const { error } = on
+      ? await supabase.from('qbo_role_permissions').insert({ role, permission })
+      : await supabase.from('qbo_role_permissions').delete().eq('role', role).eq('permission', permission)
+    if (error) {
+      alert(error.message)
+      load()
+    }
+  }
+
+  return (
+    <section className="card">
+      <div className="card-head">
+        <h2>What each account type can do</h2>
+      </div>
+      <p className="muted">
+        Owners always have every function. Tick what Admins and Users may do. Changes apply immediately to everyone
+        with that account type.
+      </p>
+      {loading ? (
+        <p className="muted">Loading…</p>
+      ) : (
+        <div className="table-wrap">
+          <table className="access-table">
+            <thead>
+              <tr>
+                <th>Function</th>
+                {roles.map((r) => (
+                  <th key={r.key} className="center-col">
+                    {r.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {PERMISSIONS.map((p) => (
+                <tr key={p.key}>
+                  <td>
+                    <div>{p.title}</div>
+                    <div className="muted small">{p.description}</div>
+                  </td>
+                  {roles.map((r) => (
+                    <td key={r.key} className="center-col">
+                      {r.key === 'owner' ? (
+                        <input type="checkbox" checked disabled aria-label={`${p.title} for Owner (always on)`} />
+                      ) : (
+                        <input
+                          type="checkbox"
+                          checked={grants.has(`${r.key}:${p.key}`)}
+                          onChange={(e) => toggle(r.key, p.key, e.target.checked)}
+                          aria-label={`${p.title} for ${r.label}`}
+                        />
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
   )
 }
 
