@@ -7,11 +7,10 @@ export interface Permission {
 
 export const PERMISSIONS: Permission[] = [
   { key: 'manage_users', title: 'Manage users', description: 'Add people, change roles, send password links.' },
-  { key: 'manage_app_access', title: 'Grant app access', description: 'Tick which apps each person can open.' },
   {
-    key: 'grant_any_app',
-    title: "Grant apps they don't hold themselves",
-    description: 'Off means they can only pass on apps they have access to.',
+    key: 'manage_app_access',
+    title: 'Grant app access',
+    description: 'Tick which apps each person can open, based on their own access.',
   },
   { key: 'manage_quickbooks', title: 'Connect QuickBooks', description: 'Connect, reconnect, and run syncs.' },
   { key: 'manage_clients', title: 'Choose tracked clients', description: 'Pick which clients show in the Payments App.' },

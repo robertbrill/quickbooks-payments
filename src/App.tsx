@@ -223,7 +223,7 @@ function Shell() {
               element={canUse(a.key) ? <ComingSoon title={a.title} /> : <Navigate to="/" replace />}
             />
           ))}
-          <Route path="/admin" element={hasSettings ? <Admin isOwner={isOwner} can={can} canGrant={(key) => can('grant_any_app') || canUse(key)} /> : <Navigate to="/" replace />} />
+          <Route path="/admin" element={hasSettings ? <Admin isOwner={isOwner} can={can} canGrant={canUse} /> : <Navigate to="/" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

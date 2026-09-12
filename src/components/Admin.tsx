@@ -354,7 +354,7 @@ function AppsCard({ canGrant }: { canGrant: (appKey: string) => boolean }) {
       </div>
       <p className="muted">
         Tick the apps each person should see on their home screen. Owners automatically see everything. Greyed-out
-        columns are apps you can't grant because you don't hold them (see the Roles tab).
+        columns are apps you can't grant because you don't have them yourself.
       </p>
       {loading ? (
         <p className="muted">Loading…</p>
