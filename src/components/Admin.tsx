@@ -6,7 +6,7 @@ import { PERMISSIONS } from '../permissions'
 
 type SettingsTab = 'access' | 'payments' | 'roles'
 
-export default function Admin({ isOwner, can, canUse }: { isOwner: boolean; can: (perm: string) => boolean; canUse: (appKey: string) => boolean }) {
+export default function Admin({ isOwner, can, canGrant }: { isOwner: boolean; can: (perm: string) => boolean; canGrant: (appKey: string) => boolean }) {
   const showAccess = can('manage_users') || can('manage_app_access')
   const showPayments = can('manage_quickbooks') || can('manage_clients')
   const tabs: { key: SettingsTab; label: string; show: boolean }[] = [
@@ -30,7 +30,7 @@ export default function Admin({ isOwner, can, canUse }: { isOwner: boolean; can:
       {tab === 'access' && (
         <>
           {can('manage_users') && <TeamCard isOwner={isOwner} />}
-          {can('manage_app_access') && <AppsCard canUse={canUse} />}
+          {can('manage_app_access') && <AppsCard canGrant={canGrant} />}
         </>
       )}
       {tab === 'payments' && (
@@ -300,7 +300,7 @@ function ClientsCard() {
   )
 }
 
-function AppsCard({ canUse }: { canUse: (appKey: string) => boolean }) {
+function AppsCard({ canGrant }: { canGrant: (appKey: string) => boolean }) {
   const grantable = APPS.filter((a) => !a.adminOnly)
   const [team, setTeam] = useState<TeamMember[]>([])
   const [grants, setGrants] = useState<Set<string>>(new Set()) // "userId:appKey"
@@ -353,8 +353,8 @@ function AppsCard({ canUse }: { canUse: (appKey: string) => boolean }) {
         <span className="muted">{grantable.length} app{grantable.length === 1 ? '' : 's'}</span>
       </div>
       <p className="muted">
-        Tick the apps each person should see on their home screen. Owners automatically see everything. You can only
-        grant apps you have access to yourself.
+        Tick the apps each person should see on their home screen. Owners automatically see everything. Greyed-out
+        columns are apps you can't grant because you don't hold them (see the Roles tab).
       </p>
       {loading ? (
         <p className="muted">Loading…</p>
@@ -365,7 +365,7 @@ function AppsCard({ canUse }: { canUse: (appKey: string) => boolean }) {
               <tr>
                 <th>Person</th>
                 {grantable.map((a) => (
-                  <th key={a.key} className={`center-col ${canUse(a.key) ? '' : 'muted'}`} title={canUse(a.key) ? '' : "You don't have this app, so you can't grant it"}>
+                  <th key={a.key} className={`center-col ${canGrant(a.key) ? '' : 'muted'}`} title={canGrant(a.key) ? '' : "You don't have this app, so you can't grant it"}>
                     {a.title}
                   </th>
                 ))}
@@ -386,7 +386,7 @@ function AppsCard({ canUse }: { canUse: (appKey: string) => boolean }) {
                         <input
                           type="checkbox"
                           checked={grants.has(`${m.id}:${a.key}`)}
-                          disabled={!canUse(a.key)}
+                          disabled={!canGrant(a.key)}
                           onChange={(e) => toggle(m.id, a.key, e.target.checked)}
                           aria-label={`${a.title} for ${m.email}`}
                         />
