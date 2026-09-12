@@ -3,13 +3,32 @@ import { supabase } from '../lib/supabase'
 import { ROLE_LABELS, shortDate, timeAgo, type ConnectionStatus, type Customer, type Role, type TeamMember, type UserApp } from '../lib/types'
 import { APPS } from '../apps'
 
+type SettingsTab = 'access' | 'payments'
+
 export default function Admin({ isOwner }: { isOwner: boolean }) {
+  const [tab, setTab] = useState<SettingsTab>('access')
   return (
     <div className="admin">
-      <TeamCard isOwner={isOwner} />
-      <AppsCard />
-      <ConnectionCard />
-      <ClientsCard />
+      <h1>Settings</h1>
+      <nav className="subtabs" role="tablist">
+        <button role="tab" aria-selected={tab === 'access'} className={tab === 'access' ? 'active' : ''} onClick={() => setTab('access')}>
+          Access
+        </button>
+        <button role="tab" aria-selected={tab === 'payments'} className={tab === 'payments' ? 'active' : ''} onClick={() => setTab('payments')}>
+          Payments App
+        </button>
+      </nav>
+      {tab === 'access' ? (
+        <>
+          <TeamCard isOwner={isOwner} />
+          <AppsCard />
+        </>
+      ) : (
+        <>
+          <ConnectionCard />
+          <ClientsCard />
+        </>
+      )}
     </div>
   )
 }
